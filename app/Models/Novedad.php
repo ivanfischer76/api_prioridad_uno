@@ -13,6 +13,9 @@ class Novedad extends Model
         'motivos_oracion',
         'fecha',
         'proyecto_id',
+        'titulo_plano',
+        'descripcion_plana',
+        'motivos_oracion_plano',
     ];
 
     public function proyecto()

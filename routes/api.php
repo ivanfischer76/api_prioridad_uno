@@ -30,6 +30,9 @@ Route::get('campanias/{campania}', [CampaniaController::class, 'show']);
 // Ruta para ver la versión de la api
 Route::get('/version', [VersionController::class, 'show']);
 
+// Rutas públicas
+Route::get('/check-db', [App\Http\Controllers\Api\SiteController::class, 'checkDatabase']);
+
 // Rutas protegidas para crear, actualizar y eliminar proyectos y campañas
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('proyectos', [ProyectoController::class, 'store']);
@@ -58,3 +61,6 @@ Route::middleware('auth:sanctum')->group(function () {
 // Rutas para subir y eliminar archivos
 Route::post('uploads', [UploadController::class, 'upload'])->middleware('auth:sanctum');
 Route::delete('uploads', [UploadController::class, 'delete'])->middleware('auth:sanctum');
+
+// Ruta temporal para depuración de novedades
+Route::get('novedades-debug/{novedad}', [NovedadController::class, 'debug']);
