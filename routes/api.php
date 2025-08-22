@@ -9,7 +9,7 @@ use App\Http\Controllers\Api\NovedadController;
 use App\Http\Controllers\Api\PermissionController;
 use App\Http\Controllers\Api\ProyectoController;
 use App\Http\Controllers\Api\RoleController;
-use App\Http\Controllers\Api\UploadController;
+use App\Http\Controllers\Api\ArchivosController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\VersionController;
 
@@ -59,8 +59,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('novedades', NovedadController::class);
 });
 // Rutas para subir y eliminar archivos
-Route::post('uploads', [UploadController::class, 'upload'])->middleware('auth:sanctum');
-Route::delete('uploads', [UploadController::class, 'delete'])->middleware('auth:sanctum');
+// Rutas protegidas para subir y eliminar archivos relacionados a novedades
+Route::middleware('auth:sanctum')->group(function () {
+    Route::post('archivos/upload', [ArchivosController::class, 'upload']);
+    Route::delete('archivos/delete', [ArchivosController::class, 'delete']);
+});
 
 // Ruta temporal para depuración de novedades
 Route::get('novedades-debug/{novedad}', [NovedadController::class, 'debug']);

@@ -79,7 +79,7 @@ class NovedadController extends Controller
 
     public function show($id)
     {
-        $novedad = Novedad::findOrFail($id);
+        $novedad = Novedad::with('archivos')->findOrFail($id);
 
         $parsedown = new \Parsedown();
         $sanitize = function($text) {
@@ -92,13 +92,20 @@ class NovedadController extends Controller
             return $text && preg_match('/<[^>]+>/', $text);
         };
 
+        // Agrega la URL pública a cada archivo
+        foreach ($novedad->archivos as $archivo) {
+            $archivo->url = \Storage::disk('public')->url($archivo->archivo);
+        }
+
         return response()->json([
+            'id' => $novedad->id,
             'titulo' => $novedad->titulo_plano,
             'descripcion' => $novedad->descripcion_plana,
             'motivos_oracion' => $novedad->motivos_oracion_plano,
             'titulo_html' => $isHtml($novedad->titulo) ? $sanitize($novedad->titulo) : $sanitize($parsedown->text($novedad->titulo)),
             'descripcion_html' => $isHtml($novedad->descripcion) ? $sanitize($novedad->descripcion) : $sanitize($parsedown->text($novedad->descripcion)),
             'motivos_oracion_html' => $isHtml($novedad->motivos_oracion) ? $sanitize($novedad->motivos_oracion) : $sanitize($parsedown->text($novedad->motivos_oracion)),
+            'archivos' => $novedad->archivos,
         ]);
     }
 

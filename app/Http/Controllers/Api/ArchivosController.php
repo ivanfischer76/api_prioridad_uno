@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Storage;
 use App\Http\Controllers\Controller;
 use App\Models\NovedadArchivo;
 
-class UploadController extends Controller
+class ArchivosController extends Controller
 {
     // Subir archivo y asociar a novedad
     public function upload(Request $request)
