@@ -10,7 +10,7 @@ class ApiVersion extends Command
 
     public function handle()
     {
-        $version = config('app.version');
+        $version = config('site.software_version');
         $this->info('API version: ' . $version);
     }
 }

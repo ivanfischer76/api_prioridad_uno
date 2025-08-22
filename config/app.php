@@ -81,5 +81,4 @@ return [
         'Validator' => Illuminate\Support\Facades\Validator::class,
         'View' => Illuminate\Support\Facades\View::class,
     ],
-    'version' => env('APP_VERSION', '0.0.2-20250815'),
 ];
