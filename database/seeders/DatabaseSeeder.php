@@ -22,9 +22,9 @@ class DatabaseSeeder extends Seeder
             RoleSeeder::class,
             UserSeeder::class,
             PermissionSeeder::class,
-            ProyectoSeeder::class,
-            CampaniaSeeder::class,
-            NovedadSeeder::class,
+            // ProyectoSeeder::class,
+            // CampaniaSeeder::class,
+            // NovedadSeeder::class,
         ]);
     }
 }

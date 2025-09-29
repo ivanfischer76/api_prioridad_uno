@@ -13,11 +13,19 @@ class RoleSeeder extends Seeder
      */
     public function run(): void
     {
-        Role::firstOrCreate(['name' => 'super administrador']);
-        Role::firstOrCreate(['name' => 'administrador']);
-        Role::firstOrCreate(['name' => 'usuario']);
-        Role::firstOrCreate(['name' => 'misionero']);
-        Role::firstOrCreate(['name' => 'enviador']);
-        // Puedes agregar más roles aquí
+        
+        Role::firstOrCreate(['name' => 'super administrador', 'guard_name' => 'web']);
+        Role::firstOrCreate(['name' => 'super administrador', 'guard_name' => 'web']);
+        Role::firstOrCreate(['name' => 'administrador', 'guard_name' => 'web']);
+        Role::firstOrCreate(['name' => 'usuario', 'guard_name' => 'web']);
+        Role::firstOrCreate(['name' => 'misionero', 'guard_name' => 'web']);
+        Role::firstOrCreate(['name' => 'enviador', 'guard_name' => 'web']);
+        
+        Role::firstOrCreate(['name' => 'super administrador', 'guard_name' => 'api']);
+        Role::firstOrCreate(['name' => 'super administrador', 'guard_name' => 'api']);
+        Role::firstOrCreate(['name' => 'administrador', 'guard_name' => 'api']);
+        Role::firstOrCreate(['name' => 'usuario', 'guard_name' => 'api']);
+        Role::firstOrCreate(['name' => 'misionero', 'guard_name' => 'api']);
+        Role::firstOrCreate(['name' => 'enviador', 'guard_name' => 'api']);
     }
 }

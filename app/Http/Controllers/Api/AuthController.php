@@ -13,24 +13,37 @@ class AuthController extends Controller
     public function login(Request $request)
     {
         $credentials = $request->validate([
-            'login' => 'required|string',
+            'username' => 'required|string',
             'password' => 'required|string',
         ]);
 
-        $user = User::where('email', $credentials['login'])
-            ->orWhere('username', $credentials['login'])
+        $user = User::with(['roles', 'permissions'])
+            ->where('username', $credentials['username'])
             ->first();
 
         if (!$user || !Hash::check($credentials['password'], $user->password)) {
-            return response()->json(['message' => 'Credenciales inválidas'], 401);
+            return response()->json([
+                'estado' => 'fail',
+                'code' => -1,
+                'errors' => ['Credenciales inválidas'],
+                'message' => 'Credenciales inválidas',
+                'token' => null,
+                "token_type" => null,
+                'user' => null,
+            ], 401);
         }
 
         $token = $user->createToken('api_token')->plainTextToken;
 
         return response()->json([
-            'user' => $user,
+            'estado' => 'ok',
+            'message' => 'Login successful',
+            'code' => 1,
+            'errors' => [],
             'token' => $token,
-        ]);
+            "token_type" => "Bearer",
+            'user' => $user,
+        ], 200);
     }
 
     public function logout(Request $request)
@@ -48,6 +61,7 @@ class AuthController extends Controller
             'iglesia' => 'required|string',
             'email' => 'required|email|unique:users',
             'password' => 'required|string|min:6',
+            'fecha_nacimiento' => 'nullable|date|before:today', // Nueva validación para fecha de nacimiento
         ]);
         $validated['password'] = Hash::make($validated['password']);
         $user = User::create($validated);
@@ -57,9 +71,13 @@ class AuthController extends Controller
         // Enviar email de verificación estándar de Laravel
         $user->sendEmailVerificationNotification();
         return response()->json([
-            'user' => $user,
+            'estado' => 'ok',
+            'message' => 'Usuario registrado. Se ha enviado un email para confirmar la dirección.',
+            'code' => 1,
+            'errors' => [],
             'token' => $token,
-            'message' => 'Usuario registrado. Se ha enviado un email para confirmar la dirección.'
+            "token_type" => "Bearer",
+            'user' => $user,
         ], 201);
     }
 

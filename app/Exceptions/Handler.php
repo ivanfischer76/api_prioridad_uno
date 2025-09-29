@@ -19,9 +19,21 @@ class Handler extends ExceptionHandler
                 'estado' => 'fail',
                 'code' => -1,
                 'errors' => ['No autenticado'],
-                'message' => 'Debes iniciar sesión para acceder a este recurso.'
+                'message' => 'Debes iniciar sesión para acceder a este recurso.',
+                'data' => null
             ], 401);
         }
         return parent::render($request, $exception);
+    }
+
+    protected function unauthenticated($request, AuthenticationException $exception)
+    {
+        return response()->json([
+            'estado' => 'fail',
+            'code' => -1,
+            'errors' => ['No autenticado'],
+            'message' => 'Debes iniciar sesión para acceder a este recurso.',
+            'data' => null
+        ], 401);
     }
 }

@@ -16,6 +16,7 @@ return new class extends Migration
             $table->string('username');
             $table->string('apellido');
             $table->string('nombre');
+            $table->date('fecha_nacimiento')->nullable()->default(null);
             $table->string('iglesia')->nullable()->default(null);
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
