@@ -13,7 +13,14 @@ class NovedadController extends Controller
     
     public function debug(Novedad $novedad)
     {
-        return response()->json($novedad);
+        $response = [
+            'estado' => 'success',
+            'message' => 'Novedad obtenida correctamente',
+            'code' => 200,
+            'errors' => null,
+            'data' => $novedad
+        ];
+        return response()->json($response, 200);
     }
 
     public function index()
@@ -24,7 +31,14 @@ class NovedadController extends Controller
             $novedad->descripcion_html = $this->markdownToHtml($novedad->descripcion);
             $novedad->motivos_oracion_html = $this->markdownToHtml($novedad->motivos_oracion);
         }
-        return response()->json($novedades);
+        $response = [
+            'estado' => 'success',
+            'message' => 'Listado de novedades obtenido correctamente',
+            'code' => 200,
+            'errors' => null,
+            'data' => $novedades
+        ];
+        return response()->json($response, 200);
     }
 
     private function sanitizeRichText($text)
@@ -44,7 +58,14 @@ class NovedadController extends Controller
     {
         $user = auth()->user();
         if (!$user) {
-            return response()->json(['error' => 'No autenticado'], 401);
+            $response = [
+                'estado' => 'error',
+                'message' => 'No autenticado',
+                'code' => 401,
+                'errors' => ['auth' => 'No autenticado'],
+                'data' => null
+            ];
+            return response()->json($response, 401);
         }
         $validated = $request->validate([
             'titulo' => 'required|string|max:255', // Puede contener HTML o Markdown
@@ -59,7 +80,14 @@ class NovedadController extends Controller
             !$user->hasRole('administrador') &&
             !($user->hasRole('misionero') && $proyecto && $proyecto->misioneros->contains($user->id))
         ) {
-            return response()->json(['error' => 'No autorizado'], 403);
+            $response = [
+                'estado' => 'error',
+                'message' => 'No autorizado',
+                'code' => 403,
+                'errors' => ['auth' => 'No autorizado'],
+                'data' => null
+            ];
+            return response()->json($response, 403);
         }
         $validated['titulo'] = $this->sanitizeRichText($validated['titulo']);
         $validated['descripcion'] = isset($validated['descripcion']) ? $this->sanitizeRichText($validated['descripcion']) : null;
@@ -74,7 +102,14 @@ class NovedadController extends Controller
         $validated['motivos_oracion_plano'] = $stripHtml($validated['motivos_oracion']);
 
         $novedad = Novedad::create($validated);
-        return response()->json($novedad, 201);
+        $response = [
+            'estado' => 'success',
+            'message' => 'Novedad creada correctamente',
+            'code' => 201,
+            'errors' => null,
+            'data' => $novedad
+        ];
+        return response()->json($response, 201);
     }
 
     public function show($id)
@@ -97,7 +132,7 @@ class NovedadController extends Controller
             $archivo->url = \Storage::disk('public')->url($archivo->archivo);
         }
 
-        return response()->json([
+        $data = [
             'id' => $novedad->id,
             'titulo' => $novedad->titulo_plano,
             'descripcion' => $novedad->descripcion_plana,
@@ -106,14 +141,29 @@ class NovedadController extends Controller
             'descripcion_html' => $isHtml($novedad->descripcion) ? $sanitize($novedad->descripcion) : $sanitize($parsedown->text($novedad->descripcion)),
             'motivos_oracion_html' => $isHtml($novedad->motivos_oracion) ? $sanitize($novedad->motivos_oracion) : $sanitize($parsedown->text($novedad->motivos_oracion)),
             'archivos' => $novedad->archivos,
-        ]);
+        ];
+        $response = [
+            'estado' => 'success',
+            'message' => 'Novedad obtenida correctamente',
+            'code' => 200,
+            'errors' => null,
+            'data' => $data
+        ];
+        return response()->json($response, 200);
     }
 
     public function update(Request $request, Novedad $novedad)
     {
         $user = auth()->user();
         if (!$user) {
-            return response()->json(['error' => 'No autenticado'], 401);
+            $response = [
+                'estado' => 'error',
+                'message' => 'No autenticado',
+                'code' => 401,
+                'errors' => ['auth' => 'No autenticado'],
+                'data' => null
+            ];
+            return response()->json($response, 401);
         }
         $proyecto = $novedad->proyecto;
         if (
@@ -121,7 +171,14 @@ class NovedadController extends Controller
             !$user->hasRole('administrador') &&
             !($user->hasRole('misionero') && $proyecto && $proyecto->misioneros->contains($user->id))
         ) {
-            return response()->json(['error' => 'No autorizado'], 403);
+            $response = [
+                'estado' => 'error',
+                'message' => 'No autorizado',
+                'code' => 403,
+                'errors' => ['auth' => 'No autorizado'],
+                'data' => null
+            ];
+            return response()->json($response, 403);
         }
         $validated = $request->validate([
             'titulo' => 'sometimes|required|string|max:255', // Puede contener HTML o Markdown
@@ -142,12 +199,26 @@ class NovedadController extends Controller
             $validated['motivos_oracion_plano'] = trim(strip_tags($validated['motivos_oracion']));
         }
         $novedad->update($validated);
-        return response()->json($novedad);
+        $response = [
+            'estado' => 'success',
+            'message' => 'Novedad actualizada correctamente',
+            'code' => 200,
+            'errors' => null,
+            'data' => $novedad
+        ];
+        return response()->json($response, 200);
     }
 
     public function destroy(Novedad $novedad)
     {
         $novedad->delete();
-        return response()->json(['message' => 'Novedad eliminada correctamente']);
+        $response = [
+            'estado' => 'success',
+            'message' => 'Novedad eliminada correctamente',
+            'code' => 200,
+            'errors' => null,
+            'data' => null
+        ];
+        return response()->json($response, 200);
     }
 }

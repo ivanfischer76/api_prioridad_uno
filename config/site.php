@@ -11,6 +11,6 @@ return [
 
     'ambiente' => env('AMBIENTE'),
     
-    'software_version' => '1.1.004-20250929',
+    'software_version' => '1.1.005-20260528',
 
 ];

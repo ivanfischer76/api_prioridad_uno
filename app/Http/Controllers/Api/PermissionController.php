@@ -14,7 +14,35 @@ class PermissionController extends Controller
      */
     public function index()
     {
-        return Permission::all();
+        $extras = [
+            'api_software_version' => config('site.software_version'),
+            'ambiente' => config('site.ambiente'),
+            'controller' => explode('\\', __CLASS__)[sizeof(explode('\\', __CLASS__))-1],
+            'function' => __FUNCTION__,
+            'method' => request()->method(),
+            'url' => 'permissions',
+        ];
+        $data = Permission::all();
+        if(empty($data)) {
+            $response = [
+                'estado' => 'empty',
+                'message' => 'No se encontraron permisos',
+                'code' => 0,
+                'errors' => [],
+                'data' => null,
+                'extras' => $extras
+            ];
+            return response()->json($response, 200);
+        }
+        $response = [
+            'estado' => 'ok',
+            'message' => 'Permisos obtenidos con éxito',
+            'code' => 1,
+            'errors' => [],
+            'data' => $data,
+            'extras' => $extras
+        ];
+        return response()->json($response, 200);
     }
 
     /**
@@ -22,8 +50,24 @@ class PermissionController extends Controller
      */
     public function store(Request $request)
     {
+        $extras = [
+            'api_software_version' => config('site.software_version'),
+            'ambiente' => config('site.ambiente'),
+            'controller' => explode('\\', __CLASS__)[sizeof(explode('\\', __CLASS__))-1],
+            'function' => __FUNCTION__,
+            'method' => request()->method(),
+            'url' => 'permissions',
+        ];
         if (!auth()->user() || !auth()->user()->hasRole('super administrador')) {
-            return response()->json(['error' => 'No autorizado'], 403);
+            $response = [
+                'estado' => 'error',
+                'message' => 'No autorizado',
+                'code' => 0,
+                'errors' => ['No autorizado'],
+                'data' => [],
+                'extras' => $extras
+            ];
+            return response()->json($response, 403);
         }
         $validated = $request->validate([
             'name' => 'required|string|unique:permissions',
@@ -33,7 +77,15 @@ class PermissionController extends Controller
         if($role) {
             $role->givePermissionTo($permission);
         }
-        return response()->json($permission, 201);
+        $response = [
+            'estado' => 'ok',
+            'message' => 'Permiso creado con éxito',
+            'code' => 1,
+            'errors' => [],
+            'data' => $permission,
+            'extras' => $extras
+        ];
+        return response()->json($response, 201);
     }
 
     /**
@@ -41,8 +93,24 @@ class PermissionController extends Controller
      */
     public function show($id)
     {
+        $extras = [
+            'api_software_version' => config('site.software_version'),
+            'ambiente' => config('site.ambiente'),
+            'controller' => explode('\\', __CLASS__)[sizeof(explode('\\', __CLASS__))-1],
+            'function' => __FUNCTION__,
+            'method' => request()->method(),
+            'url' => 'permissions/' . $id,
+        ];
         $permission = Permission::findOrFail($id);
-        return response()->json($permission);
+        $response = [
+            'estado' => 'ok',
+            'message' => 'Permiso obtenido con éxito',
+            'code' => 1,
+            'errors' => [],
+            'data' => $permission,
+            'extras' => $extras
+        ];
+        return response()->json($response, 200);
     }
 
     /**
@@ -50,15 +118,39 @@ class PermissionController extends Controller
      */
     public function update(Request $request, $id)
     {
+        $extras = [
+            'api_software_version' => config('site.software_version'),
+            'ambiente' => config('site.ambiente'),
+            'controller' => explode('\\', __CLASS__)[sizeof(explode('\\', __CLASS__))-1],
+            'function' => __FUNCTION__,
+            'method' => request()->method(),
+            'url' => 'permissions/' . $id,
+        ];
         if (!auth()->user() || !auth()->user()->hasRole('super administrador')) {
-            return response()->json(['error' => 'No autorizado'], 403);
+            $response = [
+                'estado' => 'error',
+                'message' => 'No autorizado',
+                'code' => 0,
+                'errors' => ['No autorizado'],
+                'data' => [],
+                'extras' => $extras
+            ];
+            return response()->json($response, 403);
         }
         $permission = Permission::findOrFail($id);
         $validated = $request->validate([
             'name' => 'sometimes|string|unique:permissions,name,' . $id,
         ]);
         $permission->update($validated);
-        return response()->json($permission);
+        $response = [
+            'estado' => 'ok',
+            'message' => 'Permiso actualizado con éxito',
+            'code' => 1,
+            'errors' => [],
+            'data' => $permission,
+            'extras' => $extras
+        ];
+        return response()->json($response, 200);
     }
 
     /**
@@ -66,11 +158,35 @@ class PermissionController extends Controller
      */
     public function destroy($id)
     {
+        $extras = [
+            'api_software_version' => config('site.software_version'),
+            'ambiente' => config('site.ambiente'),
+            'controller' => explode('\\', __CLASS__)[sizeof(explode('\\', __CLASS__))-1],
+            'function' => __FUNCTION__,
+            'method' => request()->method(),
+            'url' => 'permissions/' . $id,
+        ];
         if (!auth()->user() || !auth()->user()->hasRole('super administrador')) {
-            return response()->json(['error' => 'No autorizado'], 403);
+            $response = [
+                'estado' => 'error',
+                'message' => 'No autorizado',
+                'code' => 0,
+                'errors' => ['No autorizado'],
+                'data' => [],
+                'extras' => $extras
+            ];
+            return response()->json($response, 403);
         }
         $permission = Permission::findOrFail($id);
         $permission->delete();
-        return response()->json(['message' => 'Permiso eliminado']);
+        $response = [
+            'estado' => 'ok',
+            'message' => 'Permiso eliminado con éxito',
+            'code' => 1,
+            'errors' => [],
+            'data' => [],
+            'extras' => $extras
+        ];
+        return response()->json($response, 200);
     }
 }

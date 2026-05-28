@@ -41,7 +41,14 @@ class CampaniaController extends Controller
                 'proyecto_id' => $campania->proyecto_id,
             ];
         }
-        return response()->json($result);
+        $response = [
+            'estado' => 'ok',
+            'message' => 'Campañas obtenidas con éxito',
+            'code' => 1,
+            'errors' => [],
+            'data' => $result,
+        ];
+        return response()->json($response, 200);
     }
 
     /**
@@ -50,7 +57,14 @@ class CampaniaController extends Controller
     public function store(Request $request)
     {
         if (!auth()->user() || !auth()->user()->can('crear campañas')) {
-            return response()->json(['error' => 'No autorizado'], 403);
+            $response = [
+                'estado' => 'error',
+                'message' => 'No autorizado',
+                'code' => 0,
+                'errors' => ['No autorizado'],
+                'data' => [],
+            ];
+            return response()->json($response, 403);
         }
         $validated = $request->validate([
             'nombre' => 'required|string|max:255',
@@ -70,7 +84,14 @@ class CampaniaController extends Controller
         $validated['resultado_plano'] = $stripHtml($validated['resultado'] ?? null);
 
         $campania = Campania::create($validated);
-        return response()->json($campania->load('proyecto'), 201);
+        $response = [
+            'estado' => 'ok',
+            'message' => 'Campaña creada con éxito',
+            'code' => 1,
+            'errors' => [],
+            'data' => $campania->load('proyecto'),
+        ];
+        return response()->json($response, 201);
     }
 
     /**
@@ -98,7 +119,14 @@ class CampaniaController extends Controller
             'resultado_html' => $isHtml($campania->resultado) ? $sanitize($campania->resultado) : $sanitize($parsedown->text($campania->resultado)),
             'proyecto' => $campania->proyecto,
         ];
-        return response()->json($data);
+        $response = [
+            'estado' => 'ok',
+            'message' => 'Campaña obtenida con éxito',
+            'code' => 1,
+            'errors' => [],
+            'data' => $data,
+        ];
+        return response()->json($response, 200);
     }
 
     /**
@@ -107,7 +135,14 @@ class CampaniaController extends Controller
     public function update(Request $request, Campania $campania)
     {
         if (!auth()->user() || !auth()->user()->can('actualizar campañas')) {
-            return response()->json(['error' => 'No autorizado'], 403);
+            $response = [
+                'estado' => 'error',
+                'message' => 'No autorizado',
+                'code' => 0,
+                'errors' => ['No autorizado'],
+                'data' => [],
+            ];
+            return response()->json($response, 403);
         }
         $validated = $request->validate([
             'nombre' => 'sometimes|required|string|max:255',
@@ -128,7 +163,14 @@ class CampaniaController extends Controller
             $validated['resultado_plano'] = trim(strip_tags($validated['resultado']));
         }
         $campania->update($validated);
-        return response()->json($campania->load('proyecto'));
+        $response = [
+            'estado' => 'ok',
+            'message' => 'Campaña actualizada con éxito',
+            'code' => 1,
+            'errors' => [],
+            'data' => $campania->load('proyecto'),
+        ];
+        return response()->json($response, 200);
     }
 
     /**
@@ -137,9 +179,23 @@ class CampaniaController extends Controller
     public function destroy(Campania $campania)
     {
         if (!auth()->user() || !auth()->user()->can('eliminar campañas')) {
-            return response()->json(['error' => 'No autorizado'], 403);
+            $response = [
+                'estado' => 'error',
+                'message' => 'No autorizado',
+                'code' => 0,
+                'errors' => ['No autorizado'],
+                'data' => [],
+            ];
+            return response()->json($response, 403);
         }
         $campania->delete();
-        return response()->json(['message' => 'Campaña eliminada correctamente']);
+        $response = [
+            'estado' => 'ok',
+            'message' => 'Campaña eliminada correctamente',
+            'code' => 1,
+            'errors' => [],
+            'data' => [],
+        ];
+        return response()->json($response, 200);
     }
 }

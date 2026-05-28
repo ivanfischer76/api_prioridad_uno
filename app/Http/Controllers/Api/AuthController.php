@@ -35,6 +35,12 @@ class AuthController extends Controller
 
         $token = $user->createToken('api_token')->plainTextToken;
 
+        // Obtener todos los permisos (directos y por roles)
+        $allPermissions = $user->getAllPermissions();
+        $userData = $user->toArray();
+        $userData['roles'] = $user->roles;
+        $userData['permissions'] = $allPermissions;
+
         return response()->json([
             'estado' => 'ok',
             'message' => 'Login successful',
@@ -42,7 +48,7 @@ class AuthController extends Controller
             'errors' => [],
             'token' => $token,
             "token_type" => "Bearer",
-            'user' => $user,
+            'user' => $userData,
         ], 200);
     }
 

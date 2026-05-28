@@ -36,7 +36,7 @@ class PermissionSeeder extends Seeder
         $role = Role::where('name', 'super administrador')->first();
 
         foreach ($permissions as $perm) {
-            $permission = Permission::firstOrCreate(['name' => $perm]);
+            $permission = Permission::firstOrCreate(['name' => $perm, 'guard_name' => 'api']);
             $role->givePermissionTo($permission);
         }
 

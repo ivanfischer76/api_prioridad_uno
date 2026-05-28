@@ -13,7 +13,15 @@ class RoleController extends Controller
      */
     public function index()
     {
-        return Role::all();
+        $data = Role::with(['permissions'])->get();
+        $response = [
+            'estado' => 'ok',
+            'message' => 'Roles obtenidos con éxito',
+            'code' => 1,
+            'errors' => [],
+            'data' => $data,
+        ];
+        return response()->json($response, 200);
     }
 
     /**
@@ -22,13 +30,27 @@ class RoleController extends Controller
     public function store(Request $request)
     {
         if (!auth()->user() || !auth()->user()->hasRole('super administrador')) {
-            return response()->json(['error' => 'No autorizado'], 403);
+            $response = [
+                'estado' => 'error',
+                'message' => 'No autorizado',
+                'code' => 0,
+                'errors' => ['No autorizado'],
+                'data' => [],
+            ];
+            return response()->json($response, 403);
         }
         $validated = $request->validate([
             'name' => 'required|string|unique:roles',
         ]);
         $role = Role::create($validated);
-        return response()->json($role, 201);
+        $response = [
+            'estado' => 'ok',
+            'message' => 'Rol creado con éxito',
+            'code' => 1,
+            'errors' => [],
+            'data' => $role,
+        ];
+        return response()->json($response, 201);
     }
 
     /**
@@ -37,7 +59,14 @@ class RoleController extends Controller
     public function show($id)
     {
         $role = Role::findOrFail($id);
-        return response()->json($role);
+        $response = [
+            'estado' => 'ok',
+            'message' => 'Rol obtenido con éxito',
+            'code' => 1,
+            'errors' => [],
+            'data' => $role,
+        ];
+        return response()->json($response, 200);
     }
 
     /**
@@ -46,14 +75,28 @@ class RoleController extends Controller
     public function update(Request $request, $id)
     {
         if (!auth()->user() || !auth()->user()->hasRole('super administrador')) {
-            return response()->json(['error' => 'No autorizado'], 403);
+            $response = [
+                'estado' => 'error',
+                'message' => 'No autorizado',
+                'code' => 0,
+                'errors' => ['No autorizado'],
+                'data' => [],
+            ];
+            return response()->json($response, 403);
         }
         $role = Role::findOrFail($id);
         $validated = $request->validate([
             'name' => 'sometimes|string|unique:roles,name,' . $id,
         ]);
         $role->update($validated);
-        return response()->json($role);
+        $response = [
+            'estado' => 'ok',
+            'message' => 'Rol actualizado con éxito',
+            'code' => 1,
+            'errors' => [],
+            'data' => $role,
+        ];
+        return response()->json($response, 200);
     }
 
     /**
@@ -62,10 +105,24 @@ class RoleController extends Controller
     public function destroy($id)
     {
         if (!auth()->user() || !auth()->user()->hasRole('super administrador')) {
-            return response()->json(['error' => 'No autorizado'], 403);
+            $response = [
+                'estado' => 'error',
+                'message' => 'No autorizado',
+                'code' => 0,
+                'errors' => ['No autorizado'],
+                'data' => [],
+            ];
+            return response()->json($response, 403);
         }
         $role = Role::findOrFail($id);
         $role->delete();
-        return response()->json(['message' => 'Rol eliminado']);
+        $response = [
+            'estado' => 'ok',
+            'message' => 'Rol eliminado con éxito',
+            'code' => 1,
+            'errors' => [],
+            'data' => [],
+        ];
+        return response()->json($response, 200);
     }
 }

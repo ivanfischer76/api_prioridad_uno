@@ -14,7 +14,25 @@ class UserController extends Controller
      */
     public function index()
     {
-        return User::with('roles', 'permissions')->get();
+        $data = User::with('roles', 'permissions')->get();
+        if(!$data) {
+            $response = [
+                'estado' => 'empty',
+                'message' => 'No se encontraron usuarios',
+                'code' => 0,
+                'errors' => [],
+                'data' => [],
+            ];
+            return response()->json($response, 200);
+        }
+        $response = [
+            'estado' => 'ok',
+            'message' => 'Usuarios obtenidos con éxito',
+            'code' => 1,
+            'errors' => [],
+            'data' => $data,
+        ];
+        return response()->json($response, 200);
     }
 
     /**
@@ -23,7 +41,14 @@ class UserController extends Controller
     public function store(Request $request)
     {
         if (!auth()->user() || !auth()->user()->hasRole('super administrador')) {
-            return response()->json(['error' => 'No autorizado'], 403);
+            $response = [
+                'estado' => 'error',
+                'message' => 'No autorizado',
+                'code' => 0,
+                'errors' => ['No autorizado'],
+                'data' => [],
+            ];
+            return response()->json($response, 403);
         }
         $validated = $request->validate([
             'username' => 'required|string|unique:users',
@@ -35,7 +60,14 @@ class UserController extends Controller
         ]);
         $validated['password'] = Hash::make($validated['password']);
         $user = User::create($validated);
-        return response()->json($user, 201);
+        $response = [
+            'estado' => 'ok',
+            'message' => 'Usuario creado con éxito',
+            'code' => 1,
+            'errors' => [],
+            'data' => $user,
+        ];
+        return response()->json($response, 201);
     }
 
     /**
@@ -44,7 +76,14 @@ class UserController extends Controller
     public function show($id)
     {
         $user = User::findOrFail($id);
-        return response()->json($user);
+        $response = [
+            'estado' => 'ok',
+            'message' => 'Usuario obtenido con éxito',
+            'code' => 1,
+            'errors' => [],
+            'data' => $user,
+        ];
+        return response()->json($response, 200);
     }
 
     /**
@@ -68,7 +107,14 @@ class UserController extends Controller
             $validated['password'] = Hash::make($validated['password']);
         }
         $user->update($validated);
-        return response()->json($user);
+        $response = [
+            'estado' => 'ok',
+            'message' => 'Usuario actualizado con éxito',
+            'code' => 1,
+            'errors' => [],
+            'data' => $user,
+        ];
+        return response()->json($response, 200);
     }
 
     /**
@@ -77,10 +123,24 @@ class UserController extends Controller
     public function destroy($id)
     {
         if (!auth()->user() || !auth()->user()->hasRole('super administrador')) {
-            return response()->json(['error' => 'No autorizado'], 403);
+            $response = [
+                'estado' => 'error',
+                'message' => 'No autorizado',
+                'code' => 0,
+                'errors' => ['No autorizado'],
+                'data' => [],
+            ];
+            return response()->json($response, 403);
         }
         $user = User::findOrFail($id);
         $user->delete();
-        return response()->json(['message' => 'Usuario eliminado']);
+        $response = [
+            'estado' => 'ok',
+            'message' => 'Usuario eliminado con éxito',
+            'code' => 1,
+            'errors' => [],
+            'data' => [],
+        ];
+        return response()->json($response, 200);
     }
 }
