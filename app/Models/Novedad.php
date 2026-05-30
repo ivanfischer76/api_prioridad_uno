@@ -7,15 +7,20 @@ use Illuminate\Database\Eloquent\Model;
 class Novedad extends Model
 {
     protected $table = 'novedades';
+
     protected $fillable = [
         'titulo',
-        'descripcion',
-        'motivos_oracion',
+        'markdown',
         'fecha',
         'proyecto_id',
         'titulo_plano',
-        'descripcion_plana',
-        'motivos_oracion_plano',
+        'markdown_plano',
+    ];
+
+    protected $casts = [
+        'fecha' => 'date',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
     ];
 
     public function proyecto()
@@ -26,5 +31,10 @@ class Novedad extends Model
     public function archivos()
     {
         return $this->hasMany(NovedadArchivo::class, 'novedad_id');
+    }
+
+    public function motivosOracion()
+    {
+        return $this->hasMany(NovedadMotivoOracion::class, 'novedad_id');
     }
 }

@@ -16,31 +16,41 @@ class PermissionSeeder extends Seeder
     public function run(): void
     {
         $permissions = [
-            'gestionar usuarios',
-            'gestionar roles',
-            'gestionar permisos',
-            'gestionar proyectos',
+            'actualizar usuarios',
+            'actualizar campañas',
+            'actualizar novedades',
+            'actualizar proyectos',
+            'blanquear password',
+            'crear campañas',
+            'crear novedades',
+            'crear proyectos',
+            'crear usuarios',
+            'editar usuarios',
+            'eliminar campañas',
+            'eliminar novedades',
+            'eliminar proyectos',
+            'eliminar usuarios',
             'gestionar campañas',
             'gestionar novedades',
-            'crear proyectos',
-            'actualizar proyectos',
-            'eliminar proyectos',
-            'crear campañas',
-            'actualizar campañas',
-            'eliminar campañas',
-            'crear novedades',
-            'actualizar novedades',
-            'eliminar novedades'
+            'gestionar permisos',
+            'gestionar proyectos',
+            'gestionar roles',
+            'gestionar usuarios',
+            'ver estadísticas',
         ];
 
-        $role = Role::where('name', 'super administrador')->first();
+        $role = Role::where('name', 'super administrador')
+            ->where('guard_name', 'api')
+            ->first();
 
         foreach ($permissions as $perm) {
             $permission = Permission::firstOrCreate(['name' => $perm, 'guard_name' => 'api']);
             $role->givePermissionTo($permission);
         }
 
-        $role = Role::where('name', 'administrador')->first();
+        $role = Role::where('name', 'administrador')
+            ->where('guard_name', 'api')
+            ->first();
         $role->givePermissionTo('gestionar proyectos');
         $role->givePermissionTo('gestionar campañas');
         $role->givePermissionTo('gestionar novedades');
@@ -54,7 +64,9 @@ class PermissionSeeder extends Seeder
         $role->givePermissionTo('actualizar novedades');
         $role->givePermissionTo('eliminar novedades');
 
-        $role = Role::where('name', 'misionero')->first();
+        $role = Role::where('name', 'misionero')
+            ->where('guard_name', 'api')
+            ->first();
         $role->givePermissionTo('gestionar novedades');
         $role->givePermissionTo('crear novedades');
         $role->givePermissionTo('actualizar novedades');

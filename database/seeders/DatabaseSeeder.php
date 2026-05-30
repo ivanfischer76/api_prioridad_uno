@@ -22,7 +22,7 @@ class DatabaseSeeder extends Seeder
             RoleSeeder::class,
             UserSeeder::class,
             PermissionSeeder::class,
-            // ProyectoSeeder::class,
+            ProyectoSeeder::class,
             // CampaniaSeeder::class,
             // NovedadSeeder::class,
         ]);

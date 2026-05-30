@@ -4,18 +4,14 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class NovedadArchivo extends Model
+class NovedadMotivoOracion extends Model
 {
+    protected $table = 'novedad_motivos_oracion';
+
     protected $fillable = [
         'novedad_id',
-        'archivo',
-        'tipo',
-        'nombre_original',
-        'mime_type',
-        'size_bytes',
+        'motivo',
         'orden',
-        'alt',
-        'disk',
     ];
 
     public function novedad()

@@ -72,8 +72,13 @@ class PermissionController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|unique:permissions',
         ]);
-        $permission = Permission::create($validated);
-        $role = Role::where('name', 'super administrador')->first();
+        $permission = Permission::create([
+            'name' => $validated['name'],
+            'guard_name' => 'api',
+        ]);
+        $role = Role::where('name', 'super administrador')
+            ->where('guard_name', 'api')
+            ->first();
         if($role) {
             $role->givePermissionTo($permission);
         }

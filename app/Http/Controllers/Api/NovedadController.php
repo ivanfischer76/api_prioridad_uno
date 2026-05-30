@@ -3,34 +3,27 @@
 namespace App\Http\Controllers\Api;
 
 use App\Models\Novedad;
+use App\Models\NovedadMotivoOracion;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
-use HTMLPurifier;
-use Parsedown;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class NovedadController extends Controller
 {
-    
-    public function debug(Novedad $novedad)
+    public function index(Request $request)
     {
-        $response = [
-            'estado' => 'success',
-            'message' => 'Novedad obtenida correctamente',
-            'code' => 200,
-            'errors' => null,
-            'data' => $novedad
-        ];
-        return response()->json($response, 200);
-    }
+        $query = Novedad::with([
+            'archivos' => fn($q) => $q->orderBy('orden')->orderBy('id'),
+            'motivosOracion' => fn($q) => $q->orderBy('orden')->orderBy('id'),
+        ])->orderByDesc('fecha')->orderByDesc('id');
 
-    public function index()
-    {
-        $novedades = Novedad::with('archivos')->get();
-        foreach ($novedades as $novedad) {
-            $novedad->titulo_html = $this->markdownToHtml($novedad->titulo);
-            $novedad->descripcion_html = $this->markdownToHtml($novedad->descripcion);
-            $novedad->motivos_oracion_html = $this->markdownToHtml($novedad->motivos_oracion);
+        if ($request->filled('projectId')) {
+            $query->where('proyecto_id', $request->integer('projectId'));
         }
+
+        $novedades = $query->get()->map(fn($n) => $this->transformNovedad($n));
+
         $response = [
             'estado' => 'success',
             'message' => 'Listado de novedades obtenido correctamente',
@@ -39,19 +32,6 @@ class NovedadController extends Controller
             'data' => $novedades
         ];
         return response()->json($response, 200);
-    }
-
-    private function sanitizeRichText($text)
-    {
-        $config = \HTMLPurifier_Config::createDefault();
-        $purifier = new \HTMLPurifier($config);
-        return $purifier->purify($text);
-    }
-
-    private function markdownToHtml($text)
-    {
-        $parsedown = new \Parsedown();
-        return $parsedown->text($text);
     }
 
     public function store(Request $request)
@@ -67,14 +47,17 @@ class NovedadController extends Controller
             ];
             return response()->json($response, 401);
         }
+
         $validated = $request->validate([
-            'titulo' => 'required|string|max:255', // Puede contener HTML o Markdown
-            'descripcion' => 'nullable|string', // Puede contener HTML o Markdown
-            'motivos_oracion' => 'nullable|string', // Puede contener HTML o Markdown
-            'fecha' => 'nullable|date',
-            'proyecto_id' => 'required|exists:proyectos,id',
+            'title' => 'required|string|max:255',
+            'markdown' => 'required|string',
+            'prayerReasons' => 'nullable|array',
+            'prayerReasons.*' => 'required|string|max:2000',
+            'date' => 'nullable|date',
+            'projectId' => 'required|exists:proyectos,id',
         ]);
-        $proyecto = \App\Models\Proyecto::find($validated['proyecto_id']);
+
+        $proyecto = \App\Models\Proyecto::find($validated['projectId']);
         if (
             !$user->hasRole('super administrador') &&
             !$user->hasRole('administrador') &&
@@ -89,65 +72,48 @@ class NovedadController extends Controller
             ];
             return response()->json($response, 403);
         }
-        $validated['titulo'] = $this->sanitizeRichText($validated['titulo']);
-        $validated['descripcion'] = isset($validated['descripcion']) ? $this->sanitizeRichText($validated['descripcion']) : null;
-        $validated['motivos_oracion'] = isset($validated['motivos_oracion']) ? $this->sanitizeRichText($validated['motivos_oracion']) : null;
 
-        // Guardar texto plano
-        $stripHtml = function($text) {
-            return $text ? trim(strip_tags($text)) : null;
-        };
-        $validated['titulo_plano'] = $stripHtml($validated['titulo']);
-        $validated['descripcion_plana'] = $stripHtml($validated['descripcion']);
-        $validated['motivos_oracion_plano'] = $stripHtml($validated['motivos_oracion']);
+        $novedad = DB::transaction(function () use ($validated) {
+            $novedad = Novedad::create([
+                'titulo' => $validated['title'],
+                'titulo_plano' => trim(strip_tags($validated['title'])),
+                'markdown' => $validated['markdown'],
+                'markdown_plano' => trim(strip_tags($validated['markdown'])),
+                'fecha' => $validated['date'] ?? null,
+                'proyecto_id' => $validated['projectId'],
+            ]);
 
-        $novedad = Novedad::create($validated);
+            $this->syncPrayerReasons($novedad, $validated['prayerReasons'] ?? []);
+
+            return $novedad->load([
+                'archivos' => fn($q) => $q->orderBy('orden')->orderBy('id'),
+                'motivosOracion' => fn($q) => $q->orderBy('orden')->orderBy('id'),
+            ]);
+        });
+
         $response = [
             'estado' => 'success',
             'message' => 'Novedad creada correctamente',
             'code' => 201,
             'errors' => null,
-            'data' => $novedad
+            'data' => $this->transformNovedad($novedad),
         ];
         return response()->json($response, 201);
     }
 
     public function show($id)
     {
-        $novedad = Novedad::with('archivos')->findOrFail($id);
+        $novedad = Novedad::with([
+            'archivos' => fn($q) => $q->orderBy('orden')->orderBy('id'),
+            'motivosOracion' => fn($q) => $q->orderBy('orden')->orderBy('id'),
+        ])->findOrFail($id);
 
-        $parsedown = new \Parsedown();
-        $sanitize = function($text) {
-            $config = \HTMLPurifier_Config::createDefault();
-            $purifier = new \HTMLPurifier($config);
-            return $purifier->purify($text);
-        };
-
-        $isHtml = function($text) {
-            return $text && preg_match('/<[^>]+>/', $text);
-        };
-
-        // Agrega la URL pública a cada archivo
-        foreach ($novedad->archivos as $archivo) {
-            $archivo->url = \Storage::disk('public')->url($archivo->archivo);
-        }
-
-        $data = [
-            'id' => $novedad->id,
-            'titulo' => $novedad->titulo_plano,
-            'descripcion' => $novedad->descripcion_plana,
-            'motivos_oracion' => $novedad->motivos_oracion_plano,
-            'titulo_html' => $isHtml($novedad->titulo) ? $sanitize($novedad->titulo) : $sanitize($parsedown->text($novedad->titulo)),
-            'descripcion_html' => $isHtml($novedad->descripcion) ? $sanitize($novedad->descripcion) : $sanitize($parsedown->text($novedad->descripcion)),
-            'motivos_oracion_html' => $isHtml($novedad->motivos_oracion) ? $sanitize($novedad->motivos_oracion) : $sanitize($parsedown->text($novedad->motivos_oracion)),
-            'archivos' => $novedad->archivos,
-        ];
         $response = [
             'estado' => 'success',
             'message' => 'Novedad obtenida correctamente',
             'code' => 200,
             'errors' => null,
-            'data' => $data
+            'data' => $this->transformNovedad($novedad),
         ];
         return response()->json($response, 200);
     }
@@ -180,37 +146,89 @@ class NovedadController extends Controller
             ];
             return response()->json($response, 403);
         }
+
         $validated = $request->validate([
-            'titulo' => 'sometimes|required|string|max:255', // Puede contener HTML o Markdown
-            'descripcion' => 'nullable|string', // Puede contener HTML o Markdown
-            'fecha' => 'nullable|date',
-            'proyecto_id' => 'sometimes|required|exists:proyectos,id',
+            'title' => 'sometimes|required|string|max:255',
+            'markdown' => 'sometimes|required|string',
+            'prayerReasons' => 'sometimes|array',
+            'prayerReasons.*' => 'required|string|max:2000',
+            'date' => 'nullable|date',
+            'projectId' => 'sometimes|required|exists:proyectos,id',
         ]);
-        if (isset($validated['titulo'])) {
-            $validated['titulo'] = $this->sanitizeRichText($validated['titulo']);
-            $validated['titulo_plano'] = trim(strip_tags($validated['titulo']));
+
+        if (isset($validated['projectId'])) {
+            $proyectoNuevo = \App\Models\Proyecto::find($validated['projectId']);
+            $puedeReasignar =
+                $user->hasRole('super administrador') ||
+                $user->hasRole('administrador') ||
+                ($user->hasRole('misionero') && $proyectoNuevo && $proyectoNuevo->misioneros->contains($user->id));
+
+            if (!$puedeReasignar) {
+                $response = [
+                    'estado' => 'error',
+                    'message' => 'No autorizado para cambiar de proyecto',
+                    'code' => 403,
+                    'errors' => ['auth' => 'No autorizado para cambiar de proyecto'],
+                    'data' => null,
+                ];
+                return response()->json($response, 403);
+            }
         }
-        if (isset($validated['descripcion'])) {
-            $validated['descripcion'] = $this->sanitizeRichText($validated['descripcion']);
-            $validated['descripcion_plana'] = trim(strip_tags($validated['descripcion']));
-        }
-        if (isset($validated['motivos_oracion'])) {
-            $validated['motivos_oracion'] = $this->sanitizeRichText($validated['motivos_oracion']);
-            $validated['motivos_oracion_plano'] = trim(strip_tags($validated['motivos_oracion']));
-        }
-        $novedad->update($validated);
+
+        $novedad = DB::transaction(function () use ($validated, $novedad) {
+            $payload = [];
+
+            if (isset($validated['title'])) {
+                $payload['titulo'] = $validated['title'];
+                $payload['titulo_plano'] = trim(strip_tags($validated['title']));
+            }
+
+            if (isset($validated['markdown'])) {
+                $payload['markdown'] = $validated['markdown'];
+                $payload['markdown_plano'] = trim(strip_tags($validated['markdown']));
+            }
+
+            if (array_key_exists('date', $validated)) {
+                $payload['fecha'] = $validated['date'];
+            }
+
+            if (isset($validated['projectId'])) {
+                $payload['proyecto_id'] = $validated['projectId'];
+            }
+
+            if (!empty($payload)) {
+                $novedad->update($payload);
+            }
+
+            if (array_key_exists('prayerReasons', $validated)) {
+                $this->syncPrayerReasons($novedad, $validated['prayerReasons']);
+            }
+
+            return $novedad->load([
+                'archivos' => fn($q) => $q->orderBy('orden')->orderBy('id'),
+                'motivosOracion' => fn($q) => $q->orderBy('orden')->orderBy('id'),
+            ]);
+        });
+
         $response = [
             'estado' => 'success',
             'message' => 'Novedad actualizada correctamente',
             'code' => 200,
             'errors' => null,
-            'data' => $novedad
+            'data' => $this->transformNovedad($novedad),
         ];
         return response()->json($response, 200);
     }
 
     public function destroy(Novedad $novedad)
     {
+        foreach ($novedad->archivos as $archivo) {
+            $disk = $archivo->disk ?: 'public';
+            if (Storage::disk($disk)->exists($archivo->archivo)) {
+                Storage::disk($disk)->delete($archivo->archivo);
+            }
+        }
+
         $novedad->delete();
         $response = [
             'estado' => 'success',
@@ -220,5 +238,74 @@ class NovedadController extends Controller
             'data' => null
         ];
         return response()->json($response, 200);
+    }
+
+    public function debug(Novedad $novedad)
+    {
+        $novedad->load([
+            'archivos' => fn($q) => $q->orderBy('orden')->orderBy('id'),
+            'motivosOracion' => fn($q) => $q->orderBy('orden')->orderBy('id'),
+        ]);
+
+        return response()->json([
+            'estado' => 'success',
+            'message' => 'Novedad obtenida correctamente',
+            'code' => 200,
+            'errors' => null,
+            'data' => $this->transformNovedad($novedad),
+        ], 200);
+    }
+
+    private function syncPrayerReasons(Novedad $novedad, array $reasons): void
+    {
+        $novedad->motivosOracion()->delete();
+
+        foreach (array_values($reasons) as $index => $reason) {
+            $trimmed = trim($reason);
+            if ($trimmed === '') {
+                continue;
+            }
+
+            NovedadMotivoOracion::create([
+                'novedad_id' => $novedad->id,
+                'motivo' => $trimmed,
+                'orden' => $index,
+            ]);
+        }
+    }
+
+    private function transformNovedad(Novedad $novedad): array
+    {
+        return [
+            'id' => $novedad->id,
+            'projectId' => $novedad->proyecto_id,
+            'title' => $novedad->titulo,
+            'markdown' => $novedad->markdown ?? '',
+            'prayerReasons' => $novedad->motivosOracion->pluck('motivo')->values(),
+            'images' => $novedad->archivos->map(function ($archivo) {
+                $disk = $archivo->disk ?: 'public';
+                $url = $this->normalizePublicUrl(Storage::disk($disk)->url($archivo->archivo));
+
+                return [
+                    'id' => $archivo->id,
+                    'name' => $archivo->nombre_original ?: basename($archivo->archivo),
+                    'type' => $archivo->mime_type ?: $archivo->tipo,
+                    'size' => $archivo->size_bytes,
+                    'previewUrl' => $url,
+                    'url' => $url,
+                    'path' => $archivo->archivo,
+                    'order' => (int) ($archivo->orden ?? 0),
+                    'alt' => $archivo->alt,
+                ];
+            })->values(),
+            'date' => optional($novedad->fecha)->toDateString(),
+            'createdAt' => optional($novedad->created_at)->toISOString(),
+            'updatedAt' => optional($novedad->updated_at)->toISOString(),
+        ];
+    }
+
+    private function normalizePublicUrl(string $url): string
+    {
+        return preg_replace('#(?<!:)/{2,}#', '/', $url) ?? $url;
     }
 }
