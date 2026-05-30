@@ -31,10 +31,12 @@ class PermissionSeeder extends Seeder
             'eliminar proyectos',
             'eliminar usuarios',
             'gestionar campañas',
+            'gestionar bienvenida',
             'gestionar novedades',
             'gestionar permisos',
             'gestionar proyectos',
             'gestionar roles',
+            'gestionar sistema',
             'gestionar usuarios',
             'ver estadísticas',
         ];

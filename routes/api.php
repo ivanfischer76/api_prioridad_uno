@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\ArchivosController;
 use App\Http\Controllers\Api\SiteVisitController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\VersionController;
+use App\Http\Controllers\Api\WelcomeContentController;
 
 
 Route::post('/login', [AuthController::class, 'login']);
@@ -33,6 +34,7 @@ Route::get('novedades/{novedad}', [NovedadController::class, 'show']);
 Route::get('/version', [VersionController::class, 'show']);
 Route::post('/visits/track', [SiteVisitController::class, 'track']);
 Route::get('/visits/stats', [SiteVisitController::class, 'stats']);
+Route::get('/welcome-content', [WelcomeContentController::class, 'show']);
 
 // Rutas públicas
 Route::get('/check-db', [App\Http\Controllers\Api\SiteController::class, 'checkDatabase']);
@@ -53,6 +55,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('users', UserController::class);
     Route::apiResource('roles', RoleController::class);
     Route::apiResource('permissions', PermissionController::class);
+    Route::get('admin/welcome-content', [WelcomeContentController::class, 'showAdmin']);
+    Route::put('admin/welcome-content/translations/{locale}', [WelcomeContentController::class, 'updateTranslation']);
+    Route::post('admin/welcome-content/image', [WelcomeContentController::class, 'uploadImage']);
 });
 
 // Rutas protegidas para novedades

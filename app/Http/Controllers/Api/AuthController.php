@@ -68,6 +68,8 @@ class AuthController extends Controller
             'email' => 'required|email|unique:users',
             'password' => 'required|string|min:6',
             'fecha_nacimiento' => 'nullable|date|before:today', // Nueva validación para fecha de nacimiento
+            'idioma' => 'sometimes|nullable|string|in:es,en,pt,it,fr,de',
+            'notificarme' => 'sometimes|boolean',
         ]);
         $validated['password'] = Hash::make($validated['password']);
         $user = User::create($validated);
