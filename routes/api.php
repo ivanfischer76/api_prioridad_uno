@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\ProyectoController;
 use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\ArchivosController;
 use App\Http\Controllers\Api\SiteVisitController;
+use App\Http\Controllers\Api\ContactSupportController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\VersionController;
 use App\Http\Controllers\Api\WelcomeContentController;
@@ -25,8 +26,6 @@ Route::get('/verify-email/{id}/{hash}', [AuthController::class, 'verifyEmail'])-
 Route::get('proyectos', [ProyectoController::class, 'index']);
 Route::get('proyectos/{proyecto}', [ProyectoController::class, 'show']);
 Route::get('proyectos/{proyecto}/misioneros', [ProyectoController::class, 'verMisioneros']);
-Route::get('campanias', [CampaniaController::class, 'index']);
-Route::get('campanias/{campania}', [CampaniaController::class, 'show']);
 Route::get('novedades', [NovedadController::class, 'index']);
 Route::get('novedades/{novedad}', [NovedadController::class, 'show']);
 
@@ -35,6 +34,8 @@ Route::get('/version', [VersionController::class, 'show']);
 Route::post('/visits/track', [SiteVisitController::class, 'track']);
 Route::get('/visits/stats', [SiteVisitController::class, 'stats']);
 Route::get('/welcome-content', [WelcomeContentController::class, 'show']);
+Route::get('/contact-channel', [ContactSupportController::class, 'getChannel']);
+Route::post('/contact-us/messages', [ContactSupportController::class, 'submitPublicContact']);
 
 // Rutas públicas
 Route::get('/check-db', [App\Http\Controllers\Api\SiteController::class, 'checkDatabase']);
@@ -43,21 +44,38 @@ Route::get('/check-db', [App\Http\Controllers\Api\SiteController::class, 'checkD
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('users/change-password', [UserController::class, 'changePassword']);
     Route::put('users/profile', [UserController::class, 'updateProfile']);
-    Route::post('proyectos', [ProyectoController::class, 'store']);
-    Route::put('proyectos/{proyecto}', [ProyectoController::class, 'update']);
-    Route::patch('proyectos/{proyecto}', [ProyectoController::class, 'update']);
-    Route::delete('proyectos/{proyecto}', [ProyectoController::class, 'destroy']);
-    Route::post('proyectos/{proyecto}/misioneros', [ProyectoController::class, 'asignarMisioneros']);
-    Route::post('campanias', [CampaniaController::class, 'store']);
-    Route::put('campanias/{campania}', [CampaniaController::class, 'update']);
-    Route::patch('campanias/{campania}', [CampaniaController::class, 'update']);
-    Route::delete('campanias/{campania}', [CampaniaController::class, 'destroy']);
+    // Route::post('proyectos', [ProyectoController::class, 'store']);
+    // Route::put('proyectos/{proyecto}', [ProyectoController::class, 'update']);
+    // Route::patch('proyectos/{proyecto}', [ProyectoController::class, 'update']);
+    // Route::delete('proyectos/{proyecto}', [ProyectoController::class, 'destroy']);
+    // Route::post('proyectos/{proyecto}/misioneros', [ProyectoController::class, 'asignarMisioneros']);
+    // Route::post('campanias', [CampaniaController::class, 'store']);
+    // Route::put('campanias/{campania}', [CampaniaController::class, 'update']);
+    // Route::patch('campanias/{campania}', [CampaniaController::class, 'update']);
+    // Route::delete('campanias/{campania}', [CampaniaController::class, 'destroy']);
     Route::apiResource('users', UserController::class);
     Route::apiResource('roles', RoleController::class);
     Route::apiResource('permissions', PermissionController::class);
     Route::get('admin/welcome-content', [WelcomeContentController::class, 'showAdmin']);
     Route::put('admin/welcome-content/translations/{locale}', [WelcomeContentController::class, 'updateTranslation']);
     Route::post('admin/welcome-content/image', [WelcomeContentController::class, 'uploadImage']);
+
+    Route::post('support/messages', [ContactSupportController::class, 'sendMessage']);
+    Route::get('support/threads', [ContactSupportController::class, 'myThreads']);
+    Route::get('support/threads/{thread}', [ContactSupportController::class, 'myThreadMessages']);
+
+    Route::middleware('permission:gestionar sistema')->group(function () {
+        Route::post('admin/support/threads/{thread}/reply', [ContactSupportController::class, 'adminReply']);
+    });
+
+    Route::middleware('permission:gestionar contactos')->group(function () {
+        Route::get('admin/contact-us/messages', [ContactSupportController::class, 'adminInquiries']);
+    });
+
+    Route::middleware('permission:gestionar contactos')->group(function () {
+        Route::get('admin/contact-us/messages/{inquiry}', [ContactSupportController::class, 'adminInquiryDetail']);
+        Route::post('admin/contact-us/messages/{inquiry}/reply', [ContactSupportController::class, 'adminReplyInquiry']);
+    });
 });
 
 // Rutas protegidas para novedades

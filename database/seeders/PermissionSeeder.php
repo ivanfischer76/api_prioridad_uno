@@ -36,6 +36,7 @@ class PermissionSeeder extends Seeder
             'gestionar permisos',
             'gestionar proyectos',
             'gestionar roles',
+            'gestionar contactos',
             'gestionar sistema',
             'gestionar usuarios',
             'ver estadísticas',
