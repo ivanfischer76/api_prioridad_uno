@@ -60,20 +60,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('admin/welcome-content/translations/{locale}', [WelcomeContentController::class, 'updateTranslation']);
     Route::post('admin/welcome-content/image', [WelcomeContentController::class, 'uploadImage']);
 
-    Route::post('support/messages', [ContactSupportController::class, 'sendMessage']);
-    Route::get('support/threads', [ContactSupportController::class, 'myThreads']);
-    Route::get('support/threads/{thread}', [ContactSupportController::class, 'myThreadMessages']);
-
-    Route::middleware('permission:gestionar sistema')->group(function () {
-        Route::post('admin/support/threads/{thread}/reply', [ContactSupportController::class, 'adminReply']);
-    });
-
     Route::middleware('permission:gestionar contactos')->group(function () {
         Route::get('admin/contact-us/messages', [ContactSupportController::class, 'adminInquiries']);
     });
 
     Route::middleware('permission:gestionar contactos')->group(function () {
         Route::get('admin/contact-us/messages/{inquiry}', [ContactSupportController::class, 'adminInquiryDetail']);
+        Route::patch('admin/contact-us/messages/{inquiry}/state', [ContactSupportController::class, 'adminUpdateInquiryState']);
         Route::post('admin/contact-us/messages/{inquiry}/reply', [ContactSupportController::class, 'adminReplyInquiry']);
     });
 });

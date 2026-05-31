@@ -11,7 +11,7 @@ return [
 
     'ambiente' => env('AMBIENTE'),
     
-    'software_version' => '1.1.008-20260530',
+    'software_version' => '1.1.009-20260531',
 
     'welcome_default_image_url' => env('WELCOME_DEFAULT_IMAGE_URL', ''),
 

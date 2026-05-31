@@ -4,10 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\ContactInquiry;
-use App\Models\SupportMessage;
-use App\Models\SupportThread;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 class ContactSupportController extends Controller
 {
@@ -32,6 +29,8 @@ class ContactSupportController extends Controller
 
     public function submitPublicContact(Request $request)
     {
+        $authenticatedUser = $request->user('sanctum');
+
         $validated = $request->validate([
             'full_name' => 'required|string|max:160',
             'email' => 'required|email|max:255',
@@ -40,10 +39,15 @@ class ContactSupportController extends Controller
         ]);
 
         $inquiry = ContactInquiry::create([
+            'sender_user_id' => $authenticatedUser?->id,
             'full_name' => trim($validated['full_name']),
             'email' => trim($validated['email']),
             'subject' => trim($validated['subject']),
             'message' => trim($validated['message']),
+            'leido' => false,
+            'contestado' => false,
+            'fecha_contacto' => now(),
+            'fecha_respuesta' => null,
             'status' => 'new',
         ]);
 
@@ -69,6 +73,12 @@ class ContactSupportController extends Controller
         $data = $items->map(function (ContactInquiry $item) {
             return [
                 'id' => $item->id,
+                'sender_user_id' => $item->sender_user_id,
+                'contact_origin' => $item->sender_user_id ? 'internal' : 'external',
+                'leido' => (bool) $item->leido,
+                'contestado' => (bool) $item->contestado,
+                'fecha_contacto' => optional($item->fecha_contacto)->toISOString(),
+                'fecha_respuesta' => optional($item->fecha_respuesta)->toISOString(),
                 'full_name' => $item->full_name,
                 'email' => $item->email,
                 'subject' => $item->subject,
@@ -100,13 +110,6 @@ class ContactSupportController extends Controller
 
     public function adminInquiryDetail(ContactInquiry $inquiry)
     {
-        if ($inquiry->status === 'new') {
-            $inquiry->update([
-                'status' => 'read',
-                'read_at' => now(),
-            ]);
-        }
-
         $inquiry->load('repliedByUser:id,username,nombre,apellido');
 
         return response()->json([
@@ -116,6 +119,12 @@ class ContactSupportController extends Controller
             'errors' => null,
             'data' => [
                 'id' => $inquiry->id,
+                'sender_user_id' => $inquiry->sender_user_id,
+                'contact_origin' => $inquiry->sender_user_id ? 'internal' : 'external',
+                'leido' => (bool) $inquiry->leido,
+                'contestado' => (bool) $inquiry->contestado,
+                'fecha_contacto' => optional($inquiry->fecha_contacto)->toISOString(),
+                'fecha_respuesta' => optional($inquiry->fecha_respuesta)->toISOString(),
                 'full_name' => $inquiry->full_name,
                 'email' => $inquiry->email,
                 'subject' => $inquiry->subject,
@@ -137,6 +146,43 @@ class ContactSupportController extends Controller
         ]);
     }
 
+    public function adminUpdateInquiryState(Request $request, ContactInquiry $inquiry)
+    {
+        $validated = $request->validate([
+            'leido' => 'required|boolean',
+            'contestado' => 'required|boolean',
+        ]);
+
+        $leido = (bool) $validated['leido'];
+        $contestado = (bool) $validated['contestado'];
+
+        $inquiry->update([
+            'leido' => $leido,
+            'contestado' => $contestado,
+            'read_at' => $leido ? ($inquiry->read_at ?: now()) : null,
+            'fecha_respuesta' => $contestado ? ($inquiry->fecha_respuesta ?: now()) : null,
+            'replied_at' => $contestado ? ($inquiry->replied_at ?: now()) : null,
+            'status' => $contestado ? 'replied' : ($leido ? 'read' : 'new'),
+        ]);
+
+        $inquiry->refresh();
+
+        return response()->json([
+            'estado' => 'ok',
+            'message' => 'Estado actualizado correctamente.',
+            'code' => 200,
+            'errors' => null,
+            'data' => [
+                'id' => $inquiry->id,
+                'leido' => (bool) $inquiry->leido,
+                'contestado' => (bool) $inquiry->contestado,
+                'fecha_contacto' => optional($inquiry->fecha_contacto)->toISOString(),
+                'fecha_respuesta' => optional($inquiry->fecha_respuesta)->toISOString(),
+                'status' => $inquiry->status,
+            ],
+        ]);
+    }
+
     public function adminReplyInquiry(Request $request, ContactInquiry $inquiry)
     {
         $validated = $request->validate([
@@ -145,7 +191,10 @@ class ContactSupportController extends Controller
 
         $inquiry->update([
             'status' => 'replied',
+            'leido' => true,
+            'contestado' => true,
             'read_at' => $inquiry->read_at ?: now(),
+            'fecha_respuesta' => $inquiry->fecha_respuesta ?: now(),
             'admin_reply' => trim($validated['reply']),
             'replied_by_user_id' => $request->user()?->id,
             'replied_at' => now(),
@@ -160,176 +209,6 @@ class ContactSupportController extends Controller
                 'id' => $inquiry->id,
                 'status' => $inquiry->status,
                 'replied_at' => optional($inquiry->replied_at)->toISOString(),
-            ],
-        ]);
-    }
-
-    public function sendMessage(Request $request)
-    {
-        $user = $request->user();
-
-        $validated = $request->validate([
-            'sender_email' => 'required|email|max:255',
-            'subject' => 'required|string|max:180',
-            'message' => 'required|string|max:5000',
-        ]);
-
-        $result = DB::transaction(function () use ($user, $validated) {
-            $thread = SupportThread::create([
-                'user_id' => $user->id,
-                'subject' => trim($validated['subject']),
-                'status' => 'open',
-                'last_message_at' => now(),
-            ]);
-
-            $message = SupportMessage::create([
-                'thread_id' => $thread->id,
-                'sender_user_id' => $user->id,
-                'sender_type' => 'user',
-                'from_email' => trim($validated['sender_email']),
-                'body' => trim($validated['message']),
-                'read_at' => now(),
-                'sent_via_email' => false,
-            ]);
-
-            return compact('thread', 'message');
-        });
-
-        return response()->json([
-            'estado' => 'ok',
-            'message' => 'Mensaje interno enviado correctamente.',
-            'code' => 200,
-            'errors' => null,
-            'data' => [
-                'thread_id' => $result['thread']->id,
-                'message_id' => $result['message']->id,
-                'mail_sent' => false,
-            ],
-        ], 200);
-    }
-
-    public function myThreads(Request $request)
-    {
-        $user = $request->user();
-
-        $threads = SupportThread::query()
-            ->where('user_id', $user->id)
-            ->with(['messages' => function ($query) {
-                $query->orderByDesc('id');
-            }])
-            ->orderByDesc('last_message_at')
-            ->get();
-
-        $data = $threads->map(function (SupportThread $thread) {
-            $lastMessage = $thread->messages->first();
-
-            return [
-                'id' => $thread->id,
-                'subject' => $thread->subject,
-                'status' => $thread->status,
-                'last_message_at' => optional($thread->last_message_at)->toISOString(),
-                'last_message_preview' => $lastMessage ? mb_substr($lastMessage->body, 0, 140) : '',
-                'unread_count' => $thread->messages
-                    ->whereIn('sender_type', ['admin', 'system'])
-                    ->whereNull('read_at')
-                    ->count(),
-                'created_at' => optional($thread->created_at)->toISOString(),
-            ];
-        })->values();
-
-        return response()->json([
-            'estado' => 'ok',
-            'message' => 'Mensajes obtenidos correctamente.',
-            'code' => 200,
-            'errors' => null,
-            'data' => $data,
-        ]);
-    }
-
-    public function myThreadMessages(Request $request, SupportThread $thread)
-    {
-        $user = $request->user();
-
-        if ($thread->user_id !== $user->id && !$user->hasPermissionTo('gestionar sistema', 'api')) {
-            return response()->json([
-                'estado' => 'error',
-                'message' => 'No autorizado.',
-                'code' => 403,
-                'errors' => ['No autorizado.'],
-                'data' => null,
-            ], 403);
-        }
-
-        $thread->load(['messages' => function ($query) {
-            $query->orderBy('id');
-        }]);
-
-        SupportMessage::query()
-            ->where('thread_id', $thread->id)
-            ->whereIn('sender_type', ['admin', 'system'])
-            ->whereNull('read_at')
-            ->update(['read_at' => now()]);
-
-        $messages = $thread->messages->map(function (SupportMessage $message) {
-            return [
-                'id' => $message->id,
-                'sender_type' => $message->sender_type,
-                'from_email' => $message->from_email,
-                'body' => $message->body,
-                'sent_via_email' => $message->sent_via_email,
-                'read_at' => optional($message->read_at)->toISOString(),
-                'created_at' => optional($message->created_at)->toISOString(),
-            ];
-        })->values();
-
-        return response()->json([
-            'estado' => 'ok',
-            'message' => 'Conversación obtenida correctamente.',
-            'code' => 200,
-            'errors' => null,
-            'data' => [
-                'id' => $thread->id,
-                'subject' => $thread->subject,
-                'status' => $thread->status,
-                'messages' => $messages,
-            ],
-        ]);
-    }
-
-    public function adminReply(Request $request, SupportThread $thread)
-    {
-        $user = $request->user();
-
-        $validated = $request->validate([
-            'message' => 'required|string|max:5000',
-        ]);
-
-        $message = DB::transaction(function () use ($thread, $validated, $user) {
-            $thread->update([
-                'last_message_at' => now(),
-                'status' => 'open',
-            ]);
-
-            return SupportMessage::create([
-                'thread_id' => $thread->id,
-                'sender_user_id' => $user?->id,
-                'sender_type' => 'admin',
-                'from_email' => trim((string) ($user?->email ?? 'soporte@local.test')),
-                'body' => trim($validated['message']),
-                'sent_via_email' => false,
-                'read_at' => now(),
-            ]);
-        });
-
-        return response()->json([
-            'estado' => 'ok',
-            'message' => 'Respuesta interna guardada correctamente.',
-            'code' => 200,
-            'errors' => null,
-            'data' => [
-                'thread_id' => $thread->id,
-                'message_id' => $message->id,
-                'mail_sent' => false,
             ],
         ]);
     }
